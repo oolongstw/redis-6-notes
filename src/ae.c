@@ -60,6 +60,9 @@
     #endif
 #endif
 
+/*
+ * 初始化事件处理器状态
+ */
 aeEventLoop *aeCreateEventLoop(int setsize) {
     aeEventLoop *eventLoop;
     int i;
@@ -77,6 +80,7 @@ aeEventLoop *aeCreateEventLoop(int setsize) {
     eventLoop->beforesleep = NULL;
     eventLoop->aftersleep = NULL;
     eventLoop->flags = 0;
+    // 创建一个新的 epoll 实例，并将它赋值给 eventLoop
     if (aeApiCreate(eventLoop) == -1) goto err;
     /* Events with mask == AE_NONE are not set. So let's initialize the
      * vector with it. */
@@ -150,6 +154,10 @@ void aeStop(aeEventLoop *eventLoop) {
     eventLoop->stop = 1;
 }
 
+/*
+ * 根据 mask 参数的值，监听 fd 文件的状态，
+ * 当 fd 可用时，执行 proc 函数
+ */
 int aeCreateFileEvent(aeEventLoop *eventLoop, int fd, int mask,
         aeFileProc *proc, void *clientData)
 {
@@ -383,6 +391,7 @@ static int processTimeEvents(aeEventLoop *eventLoop) {
  * if flags has AE_CALL_BEFORE_SLEEP set, the beforesleep callback is called.
  *
  * The function returns the number of events processed. */
+// 处理所有已到达的时间事件，以及所有已就绪的文件事件
 int aeProcessEvents(aeEventLoop *eventLoop, int flags)
 {
     int processed = 0, numevents;
@@ -444,6 +453,7 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags)
 
         /* Call the multiplexing API, will return only on timeout or when
          * some event fires. */
+        // 处理文件事件，阻塞时间由 tvp 决定
         numevents = aeApiPoll(eventLoop, tvp);
 
         /* After sleep callback. */
@@ -513,6 +523,7 @@ int aeProcessEvents(aeEventLoop *eventLoop, int flags)
 
 /* Wait for milliseconds until the given file descriptor becomes
  * writable/readable/exception */
+// 在给定毫秒内等待，直到 fd 变成可写、可读或异常
 int aeWait(int fd, int mask, long long milliseconds) {
     struct pollfd pfd;
     int retmask = 0, retval;
@@ -533,6 +544,9 @@ int aeWait(int fd, int mask, long long milliseconds) {
     }
 }
 
+/*
+ * 事件处理器主循环
+ */
 void aeMain(aeEventLoop *eventLoop) {
     eventLoop->stop = 0;
     while (!eventLoop->stop) {

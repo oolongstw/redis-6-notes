@@ -114,9 +114,9 @@ int activeExpireCycleTryExpire(redisDb *db, dictEntry *de, long long now) {
  * order to do more work in both the fast and slow expire cycles.
  */
 
-#define ACTIVE_EXPIRE_CYCLE_KEYS_PER_LOOP 20 /* Keys for each DB loop. */
-#define ACTIVE_EXPIRE_CYCLE_FAST_DURATION 1000 /* Microseconds. */
-#define ACTIVE_EXPIRE_CYCLE_SLOW_TIME_PERC 25 /* Max % of CPU to use. */
+#define ACTIVE_EXPIRE_CYCLE_KEYS_PER_LOOP 20 /* Keys for each DB loop. */ // 每个 db 每次循环的 key 的数量
+#define ACTIVE_EXPIRE_CYCLE_FAST_DURATION 1000 /* Microseconds. */ // 如果是运行在快速模式之下 那么最多只能运行 1000 微秒 
+#define ACTIVE_EXPIRE_CYCLE_SLOW_TIME_PERC 25 /* Max % of CPU to use. */ // 最多使用 25% 的 cpu
 #define ACTIVE_EXPIRE_CYCLE_ACCEPTABLE_STALE 10 /* % of stale keys after which
                                                    we do extra efforts. */
 
@@ -150,6 +150,7 @@ void activeExpireCycle(int type) {
      * expires and evictions of keys not being performed. */
     if (clientsArePaused()) return;
 
+    // 运行在 快速模式下
     if (type == ACTIVE_EXPIRE_CYCLE_FAST) {
         /* Don't start a fast cycle if the previous cycle did not exit
          * for time limit, unless the percentage of estimated stale keys is
@@ -214,6 +215,8 @@ void activeExpireCycle(int type) {
             iteration++;
 
             /* If there is nothing to expire try next DB ASAP. */
+            // 获取数据库中带过期时间的键的数量
+            // 如果该数量为 0 ，直接跳过这个数据库
             if ((num = dictSize(db->expires)) == 0) {
                 db->avg_ttl = 0;
                 break;

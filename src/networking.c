@@ -930,6 +930,9 @@ static void acceptCommonHandler(connection *conn, int flags, char *ip) {
      * Admission control will happen before a client is created and connAccept()
      * called, because we don't want to even start transport-level negotiation
      * if rejected. */
+    // 如果新添加的客户端令服务器的最大客户端数量达到了
+    // 那么向新客户端写入错误信息，并关闭新客户端
+    // 先创建客户端，再进行数量检查是为了方便地进行错误信息写入
     if (listLength(server.clients) + getClusterConnectionsCount()
         >= server.maxclients)
     {

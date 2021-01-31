@@ -36,6 +36,9 @@ typedef struct aeApiState {
     struct epoll_event *events;
 } aeApiState;
 
+/*
+ * 创建一个新的 epoll 实例，并将它赋值给 eventLoop
+ */
 static int aeApiCreate(aeEventLoop *eventLoop) {
     aeApiState *state = zmalloc(sizeof(aeApiState));
 
@@ -45,6 +48,7 @@ static int aeApiCreate(aeEventLoop *eventLoop) {
         zfree(state);
         return -1;
     }
+    // 创建 epoll 实例
     state->epfd = epoll_create(1024); /* 1024 is just a hint for the kernel */
     if (state->epfd == -1) {
         zfree(state->events);
@@ -62,6 +66,9 @@ static int aeApiResize(aeEventLoop *eventLoop, int setsize) {
     return 0;
 }
 
+/*
+ * 释放 epoll 实例和事件槽
+ */
 static void aeApiFree(aeEventLoop *eventLoop) {
     aeApiState *state = eventLoop->apidata;
 
@@ -70,6 +77,9 @@ static void aeApiFree(aeEventLoop *eventLoop) {
     zfree(state);
 }
 
+/*
+ * fd 绑定事件
+ */
 static int aeApiAddEvent(aeEventLoop *eventLoop, int fd, int mask) {
     aeApiState *state = eventLoop->apidata;
     struct epoll_event ee = {0}; /* avoid valgrind warning */
@@ -83,6 +93,9 @@ static int aeApiAddEvent(aeEventLoop *eventLoop, int fd, int mask) {
     if (mask & AE_READABLE) ee.events |= EPOLLIN;
     if (mask & AE_WRITABLE) ee.events |= EPOLLOUT;
     ee.data.fd = fd;
+    // int epoll_ctl(int epfd, int op, int fd, struct epollevent *event)
+    // 对指定描述符fd执行op的绑定操作
+    // 把fd写入红黑树，同时在内核注册回调函数
     if (epoll_ctl(state->epfd,op,fd,&ee) == -1) return -1;
     return 0;
 }
@@ -105,10 +118,17 @@ static void aeApiDelEvent(aeEventLoop *eventLoop, int fd, int delmask) {
     }
 }
 
+/*
+ * 获取可执行事件
+ */
 static int aeApiPoll(aeEventLoop *eventLoop, struct timeval *tvp) {
     aeApiState *state = eventLoop->apidata;
     int retval, numevents = 0;
 
+    // int epoll_wait(int epfd, struct epollevent *events, int maxevents, int timeout);
+    // 获取epfd上的io事件
+    // epoll_wait会阻塞，直到一个文件描述符触发了事件，或者被一个信号处理函数打断，或者timeout超时
+    // 返回值是需要处理的fd数量
     retval = epoll_wait(state->epfd,state->events,eventLoop->setsize,
             tvp ? (tvp->tv_sec*1000 + tvp->tv_usec/1000) : -1);
     if (retval > 0) {
